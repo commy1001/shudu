@@ -3,38 +3,60 @@
 import { useState, useEffect } from 'react';
 import Square from './components/square';
 import { validateSudoku } from './utils/sudokuRules';
-import { initialSudokuPuzzle } from './utils/sudokuPuzzles';
+import puzzles from '../data/puzzles.json';
+import './globals.css'; 
 
 const App = () => {
-  const [squares, setSquares] = useState<(string | null)[]>(Array(81).fill(null));// 存储当前所有格子的值
-  const [prefilled, setPrefilled] = useState<boolean[]>(Array(81).fill(false));// 标记哪些格子是预设的
-  const [errors, setErrors] = useState<number[]>([]);// 存储错误格子的索引
-  const [isCompleted, setIsCompleted] = useState(false);// 是否完成游戏
+  const [squares, setSquares] = useState<(string | null)[]>(Array(81).fill(null));
+  const [prefilled, setPrefilled] = useState<boolean[]>(Array(81).fill(false));
+  const [errors, setErrors] = useState<number[]>([]);
+  const [isCompleted, setIsCompleted] = useState(false);
   const [showErrors, setShowErrors] = useState(false); 
-  const [message, setMessage] = useState(''); // 状态提示消息
+  const [message, setMessage] = useState('');
+  const [currentPuzzleIndex, setCurrentPuzzleIndex] = useState(0); 
+  const [puzzlesList] = useState(puzzles); 
 
   useEffect(() => {
-    initializePuzzle();
-  }, []);
+    initializePuzzle(currentPuzzleIndex);
+  }, [currentPuzzleIndex]);
 
-  //初始数独谜题
-  const initializePuzzle = () => {
-    const newPrefilled = initialSudokuPuzzle.map(cell => cell !== null);// 初始化已填充的格子
-    setSquares(initialSudokuPuzzle);// 设置初始数独谜题 
-    setPrefilled(newPrefilled);// 设置已填充的格子
+  // 初始化题目
+  const initializePuzzle = (index: number) => {
+    const puzzle = puzzlesList[index].puzzle;
+    const newPrefilled = puzzle.map(cell => cell !== null);
+    setSquares(puzzle);
+    setPrefilled(newPrefilled);
     setErrors([]);
     setIsCompleted(false);
     setShowErrors(false);
-    setMessage('');
+    setMessage(`当前题目: ${puzzlesList[index].name} (${puzzlesList[index].difficulty})`);
+  };
+
+  // 切换到下一题
+  const nextPuzzle = () => {
+    const nextIndex = (currentPuzzleIndex + 1) % puzzlesList.length;
+    setCurrentPuzzleIndex(nextIndex);
+  };
+
+  // 切换到上一题
+  const prevPuzzle = () => {
+    const prevIndex = (currentPuzzleIndex - 1 + puzzlesList.length) % puzzlesList.length;
+    setCurrentPuzzleIndex(prevIndex);
+  };
+
+  // 随机选择题目
+  const randomPuzzle = () => {
+    const randomIndex = Math.floor(Math.random() * puzzlesList.length);
+    setCurrentPuzzleIndex(randomIndex);
   };
 
   // 处理输入
   const handleChange = (index: number, value: string) => {
     if (prefilled[index]) return;
 
-    const sanitizedValue = value.replace(/[^1-9]/g, '').slice(0, 1);// 确保输入是1-9之间的数字
-    const nextSquares = [...squares];// 创建下一个状态
-    nextSquares[index] = sanitizedValue || null;// 更新当前格子的值
+    const sanitizedValue = value.replace(/[^1-9]/g, '').slice(0, 1);
+    const nextSquares = [...squares];
+    nextSquares[index] = sanitizedValue || null;
     setSquares(nextSquares);
 
     // 实时验证
@@ -74,8 +96,11 @@ const App = () => {
         <button onClick={checkAnswer} className="button">
           检查答案
         </button>
-        <button onClick={initializePuzzle} className="button">
+        <button onClick={() => initializePuzzle(currentPuzzleIndex)} className="button">
           重新开始
+        </button>
+        <button onClick={randomPuzzle} className="button" disabled={puzzlesList.length <= 1}>
+          随机题目
         </button>
       </div>
 
@@ -84,6 +109,14 @@ const App = () => {
           {message}
         </div>
       )}
+      <div style={{display: 'flex', gap: '10px'}}>
+       <button onClick={prevPuzzle} className="button2" disabled={puzzlesList.length <= 1}>
+          上一题
+        </button>
+        <button onClick={nextPuzzle} className="button2" disabled={puzzlesList.length <= 1}>
+          下一题
+        </button>
+        </div>
 
       <div className="board">
         {Array.from({ length: 9 }, (_, row) => (
