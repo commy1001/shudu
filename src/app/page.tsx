@@ -1,103 +1,110 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { useState, useEffect } from 'react';
+import Square from './components/square';
+import { validateSudoku } from './utils/sudokuRules';
+import { initialSudokuPuzzle } from './utils/sudokuPuzzles';
+
+const App = () => {
+  const [squares, setSquares] = useState<(string | null)[]>(Array(81).fill(null));// 存储当前所有格子的值
+  const [prefilled, setPrefilled] = useState<boolean[]>(Array(81).fill(false));// 标记哪些格子是预设的
+  const [errors, setErrors] = useState<number[]>([]);// 存储错误格子的索引
+  const [isCompleted, setIsCompleted] = useState(false);// 是否完成游戏
+  const [showErrors, setShowErrors] = useState(false); 
+  const [message, setMessage] = useState(''); // 状态提示消息
+
+  useEffect(() => {
+    initializePuzzle();
+  }, []);
+
+  //初始数独谜题
+  const initializePuzzle = () => {
+    const newPrefilled = initialSudokuPuzzle.map(cell => cell !== null);// 初始化已填充的格子
+    setSquares(initialSudokuPuzzle);// 设置初始数独谜题 
+    setPrefilled(newPrefilled);// 设置已填充的格子
+    setErrors([]);
+    setIsCompleted(false);
+    setShowErrors(false);
+    setMessage('');
+  };
+
+  // 处理输入
+  const handleChange = (index: number, value: string) => {
+    if (prefilled[index]) return;
+
+    const sanitizedValue = value.replace(/[^1-9]/g, '').slice(0, 1);// 确保输入是1-9之间的数字
+    const nextSquares = [...squares];// 创建下一个状态
+    nextSquares[index] = sanitizedValue || null;// 更新当前格子的值
+    setSquares(nextSquares);
+
+    // 实时验证
+    const newErrors = validateSudoku(nextSquares);
+    setErrors(newErrors || []);
+    checkCompletion(nextSquares, newErrors || []);
+  };
+
+  // 检查是否完成
+  const checkCompletion = (grid: (string | null)[], errors: number[]) => {
+    const filled = grid.every(cell => cell !== null);
+    const valid = errors.length === 0;
+    setIsCompleted(filled && valid);
+    if (filled && valid) {
+      setMessage('🎉 恭喜！数独完成！');
+    }
+  };
+
+  // 手动检查答案
+  const checkAnswer = () => {
+    const newErrors = validateSudoku(squares);
+    setErrors(newErrors || []);
+    setShowErrors(true);
+
+    if (newErrors?.length) {
+      setMessage('❌ 存在错误，请检查高亮格子！');
+    } else if (squares.some(cell => cell === null)) {
+      setMessage('⚠️ 未完成，请继续填写！');
+    } else {
+      setMessage('🎉 全部正确！');
+    }
+  };
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className="sudoku-container">
+      <div className="controls">
+        <button onClick={checkAnswer} className="button">
+          检查答案
+        </button>
+        <button onClick={initializePuzzle} className="button">
+          重新开始
+        </button>
+      </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+      {message && (
+        <div className={`message ${isCompleted ? 'success' : 'error'}`}>
+          {message}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      )}
+
+      <div className="board">
+        {Array.from({ length: 9 }, (_, row) => (
+          <div className="board-row" key={row}>
+            {Array.from({ length: 9 }, (_, col) => {
+              const index = row * 9 + col;
+              return (
+                <Square
+                  key={index}
+                  value={squares[index]}
+                  isPrefilled={prefilled[index]}
+                  isError={showErrors && errors.includes(index)}
+                  onSquareChange={(value) => handleChange(index, value)}
+                />
+              );
+            })}
+          </div>
+        ))}
+      </div>
     </div>
   );
-}
+};
+
+export default App;
